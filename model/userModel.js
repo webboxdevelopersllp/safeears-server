@@ -15,6 +15,7 @@ const UserSchema = new Schema(
     },
     email: {
       type: String,
+      sparse:true,
       unique: true,
     },
     password: {
@@ -22,6 +23,7 @@ const UserSchema = new Schema(
     },
     phoneNumber: {
       type: Number, 
+      sparse:true,
       unique:true
     },
     dateOfBirth: {
