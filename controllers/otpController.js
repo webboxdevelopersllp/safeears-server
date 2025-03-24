@@ -110,9 +110,9 @@ const forgotPasswordMobile = async (req, res) => {
 
   const user = await User.findOne({ phoneNumber });
 
-  if (!user) {
-    throw Error("Phone number is not Registered");
-  }
+  // if (!user) {
+  //   throw Error("Phone number is not Registered");
+  // }
 
   let otp = Math.floor(Math.random() * (999999 - 100000 + 1)) + 100000;
 
