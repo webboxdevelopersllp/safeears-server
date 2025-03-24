@@ -6,7 +6,7 @@ const bcrypt = require("bcrypt");
 const { sendOTPMail, passwordChangedMail } = require("../util/mailFunction");
 const { Twilio } = require("twilio");
 
-const twilioClient = new Twilio(process.env.TWILIO_ACCOUNT_SID, process.env.e);
+const twilioClient = new Twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
 
 // Sending OTP to email for validation
