@@ -74,15 +74,15 @@ const generateInvoicePDF = async (order) => {
         )
         .text(`Total Amount: ${order.totalPrice}`, 50, 230)
         .text(order.address.name, 300, 200)
-        .text(order.address.phoneNumber, 300, 200)
-        .text(order.address.address, 300, 215)
+        .text(order.address.phoneNumber, 300, 215)
+        .text(order.address.address, 300, 230)
         .text(
           `${order.address.city}, ${order.address.regionState ? order.address.regionState +", ": ""}  ${order.address.pinCode}`,
           300,
-          240
+          250
         )
-        .moveTo(50, 250)
-        .lineTo(550, 250)
+        .moveTo(50, 260)
+        .lineTo(550, 260)
         .lineWidth(0.5)
         .strokeColor("#ccc")
         .stroke()
