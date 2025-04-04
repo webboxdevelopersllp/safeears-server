@@ -35,6 +35,7 @@ const getUserDataFirst = async (req, res) => {
 
     res.status(200).json(user);
   } catch (error) {
+    console.log("Error")
     res.status(400).json({ error: error.message });
   }
 };
@@ -159,20 +160,22 @@ const logoutUser = async (req, res) => {
 const editUser = async (req, res) => {
   try {
     const token = req.cookies.user_token;
-
+    
     const { _id } = jwt.verify(token, process.env.SECRET);
-
+    
     if (!mongoose.Types.ObjectId.isValid(_id)) {
       throw Error("Invalid ID!!!");
     }
-
+    
     let formData = req.body;
+    console.log(formData, "formData");
 
     const profileImgURL = req?.file?.filename;
 
     if (profileImgURL) {
       formData = { ...formData, profileImgURL: profileImgURL };
     }
+    
 
     const updatedUser = await User.findOneAndUpdate(
       { _id },
@@ -188,6 +191,7 @@ const editUser = async (req, res) => {
 
     res.status(200).json(user);
   } catch (error) {
+    // console.log(error, "error.message")
     res.status(400).json({ error: error.message });
   }
 };

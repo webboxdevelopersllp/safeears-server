@@ -284,7 +284,7 @@ const sendOrderDetailsMail = async (email, order, pdfBuffer) => {
                   <h1>Order Confirmation & Invoice</h1>
               </div>
               <div class="order-details">
-                  <p>Dear ${order.customerName},</p>
+                  <p>Dear ${order.address.name},</p>
                   <p>Thank you for your order. Here are the details of your purchase:</p>
                   <table class="order-table">
                       <thead>

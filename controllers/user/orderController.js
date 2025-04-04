@@ -12,6 +12,11 @@ const Counter = require("../../model/counterModel");
 const { generateInvoicePDF } = require("../Common/invoicePDFGenFunctions");
 const { sendOrderDetailsMail } = require("../../util/mailFunction");
 
+const twilio = require('twilio');
+
+const client = new twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+
+
 // Just the function increment or decrement product count
 const updateProductList = async (id, count) => {
   const product = await Products.findOne({ _id: id });
@@ -50,6 +55,23 @@ const updateProductList = async (id, count) => {
     });
   }
 };
+
+
+const sendWhatsAppMessage = async (to, message) => {
+  try {
+    const response = await client.messages.create({
+      from: 'whatsapp:' + process.env.TWILIO_WHATSAPP_NUMBER,
+      to: 'whatsapp:' + to, // User's WhatsApp number
+      body: message,
+      // mediaUrl: 'https://example.com/path/to/your/pdf.pdf', // URL to the PDF file
+    });
+    console.log("Message sent:", response);
+    return response;
+  } catch (error) {
+    console.error("Error sending message:", error);
+  }
+};
+
 
 // Creating an order
 const createOrder = async (req, res) => {
@@ -124,6 +146,36 @@ const createOrder = async (req, res) => {
         const pdfBuffer = await generateInvoicePDF(order2);
 
         console.log(order2);
+        // Send WhatsApp message
+        if (order2?.user?.phoneNumber) {
+          // Generate invoice message
+          const productDetails = order2.products.map(
+            (item) => `🔹 ${item.productId.name} - ₹${item.salePrice} x ${item.quantity}`
+          ).join("\n");
+
+          const addressDetails = `📍 *Shipping Address:*\n` +
+            `   Name: ${order2.address.name}\n` +
+            `   Phone: ${order2.address.phoneNumber}\n` +
+            `   Pin Code: ${order2.address.pinCode}\n` +
+            `   Locality: ${order2.address.locality}\n` +
+            `   Address: ${order2.address.address}, ${order2.address.city}`;
+
+          const message = `Hello ${order2.user.firstName},\n\n` +
+            "Thank you for your purchase! 🎉\n\n" +
+            "*🛍 Order Summary*\n" +
+            `📦 *Product(s):*\n${productDetails}\n` +
+            `💰 *Subtotal:* ₹${order2.subTotal}\n` +
+            `🛒 *Total Quantity:* ${order2.totalQuantity}\n` +
+            `${addressDetails}\n` +
+            `🚚 *Payment Mode:* ${order2.paymentMode}\n` +
+            `📅 *Order Status:* Pending\n\n` +
+            "We appreciate your trust in us. If you have any questions, feel free to contact us.\n\n" +
+            "Happy Shopping! 🛒✨\n" +
+            "Team Safe Ears";
+          // Send the message via WhatsApp
+          sendWhatsAppMessage(order2?.user?.phoneNumber, message);
+        }
+        // Send email with invoice
         sendOrderDetailsMail(order2.user.email, order2, pdfBuffer)
       } catch (err) {
         console.log("Error while senting invoice", err);
