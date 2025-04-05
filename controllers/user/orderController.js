@@ -77,7 +77,6 @@ const sendWhatsAppMessage = async (to, message) => {
 const createOrder = async (req, res) => {
   try {
     const token = req.cookies.user_token;
-
     const { _id } = jwt.verify(token, process.env.SECRET);
 
     if (!mongoose.Types.ObjectId.isValid(_id)) {
@@ -96,13 +95,10 @@ const createOrder = async (req, res) => {
     let sum = 0;
     let totalQuantity = 0;
 
-    cart.items.map((item) => {
-      sum = sum + (item.product.salePrice) * item.quantity;
-      totalQuantity = totalQuantity + item.quantity;
+    cart.items.forEach((item) => {
+      sum += item.product.salePrice * item.quantity;
+      totalQuantity += item.quantity;
     });
-
-    let sumWithTax = parseInt(sum);
-
 
     const products = cart.items.map((item) => ({
       productId: item.product._id,
@@ -111,90 +107,70 @@ const createOrder = async (req, res) => {
       salePrice: item.product.salePrice,
     }));
 
-    let orderData = {
+    const orderData = {
       user: _id,
       address: addressData,
       products: products,
       subTotal: sum,
       tax: 0,
-      totalPrice: sumWithTax,
+      totalPrice: sum,
       paymentMode,
       totalQuantity,
-      statusHistory: [
-        {
-          status: "pending",
-        },
-      ],
-
+      statusHistory: [{ status: "pending" }],
     };
 
-
-
-
-
     const order = await Order.create(orderData);
-    // console.log(order);
-
 
     if (order) {
-
-
       try {
-        const order2 = await Order.findOne(order._id).populate("products.productId user");
-
+        const order2 = await Order.findById(order._id).populate("products.productId user");
 
         const pdfBuffer = await generateInvoicePDF(order2);
 
-        console.log(order2);
-        // Send WhatsApp message
+        // WhatsApp Template Message
         if (order2?.user?.phoneNumber) {
-          // Generate invoice message
           const productDetails = order2.products.map(
             (item) => `🔹 ${item.productId.name} - ₹${item.salePrice} x ${item.quantity}`
           ).join("\n");
 
-          const addressDetails = `📍 *Shipping Address:*\n` +
-            `   Name: ${order2.address.name}\n` +
-            `   Phone: ${order2.address.phoneNumber}\n` +
-            `   Pin Code: ${order2.address.pinCode}\n` +
-            `   Locality: ${order2.address.locality}\n` +
-            `   Address: ${order2.address.address}, ${order2.address.city}`;
-
-          const message = `Hello ${order2.user.firstName},\n\n` +
-            "Thank you for your purchase! 🎉\n\n" +
-            "*🛍 Order Summary*\n" +
-            `📦 *Product(s):*\n${productDetails}\n` +
-            `💰 *Subtotal:* ₹${order2.subTotal}\n` +
-            `🛒 *Total Quantity:* ${order2.totalQuantity}\n` +
-            `${addressDetails}\n` +
-            `🚚 *Payment Mode:* ${order2.paymentMode}\n` +
-            `📅 *Order Status:* Pending\n\n` +
-            "We appreciate your trust in us. If you have any questions, feel free to contact us.\n\n" +
-            "Happy Shopping! 🛒✨\n" +
-            "Team Safe Ears";
-          // Send the message via WhatsApp
-          sendWhatsAppMessage(order2?.user?.phoneNumber, message);
+          await client.messages.create({
+            contentSid: "HX247eebf50e2181bb3291ecfc0cb187d3", // Your approved template SID
+            from: 'whatsapp:' + process.env.TWILIO_WHATSAPP_NUMBER, // Twilio sandbox number or your registered WhatsApp number
+            to: `whatsapp:${order2.user.phoneNumber}`,
+            contentVariables: JSON.stringify({
+              "1": order2.user.firstName,
+              "2": productDetails,
+              "3": order2.subTotal.toString(),
+              "4": order2.totalQuantity.toString(),
+              "5": order2.address.name,
+              "6": order2.address.phoneNumber,
+              "7": order2.address.pinCode.toString(),
+              "8": order2.address.locality,
+              "9": `${order2.address.address}, ${order2.address.city}`,
+              "10": order2.paymentMode,
+              "11": "Pending",
+             
+            }),
+          });
+     
         }
-        // Send email with invoice
-        sendOrderDetailsMail(order2.user.email, order2, pdfBuffer)
+
+
+
+        // Email with invoice PDF
+        sendOrderDetailsMail(order2.user.email, order2, pdfBuffer);
+
       } catch (err) {
-        console.log("Error while senting invoice", err);
-
+        console.log("Error while sending invoice", err);
       }
+
+      await Cart.findByIdAndDelete(cart._id); // Clear cart after order
     }
-
-    if (order) {
-      await Cart.findByIdAndDelete(cart._id);
-    }
-
-
-
-
 
     res.status(200).json({ order });
+
   } catch (error) {
     console.log(error);
-
     res.status(400).json({ error: error.message });
   }
 };

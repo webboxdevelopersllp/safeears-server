@@ -4,7 +4,6 @@ const cookieParser = require("cookie-parser");
 const cors = require("cors"); // Add it back when communicating with react
 const logger = require("morgan");
 const mongoose = require("mongoose");
-const { Twilio } = require("twilio");
 
 const app = express()
 
@@ -30,7 +29,7 @@ const corsOptions = {
   credentials: true,
   origin: function (origin, callback) {
     callback(null, true); // Allow all origins dynamically
-  },
+  },
 };
 
 app.use(cors(corsOptions));
@@ -46,6 +45,8 @@ const userRoutes = require("./routes/user");
 const { requireAuth, requireAdminAuth } = require("./middleware/requireAuth");
 
 app.get("/api/test", (req, res) => { res.status(200).json({ data: "test route success" }) });
+
+
 
 app.use("/api/auth", authRoutes)
 app.use("/api/admin", requireAdminAuth, adminRoutes)
