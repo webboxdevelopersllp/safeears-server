@@ -290,6 +290,7 @@ const sendOrderDetailsMail = async (email, order, pdfBuffer) => {
                       <thead>
                           <tr>
                               <th>Product</th>
+                              <th>Size</th>
                               <th>Quantity</th>
                               <th>Price</th>
                           </tr>
@@ -298,6 +299,7 @@ const sendOrderDetailsMail = async (email, order, pdfBuffer) => {
                           ${order.products.map(product => `
                               <tr>
                                   <td>${product.productId.name}</td>
+                                  <td>Size : ${product.size ? product.size : "Regular"}</td>
                                   <td>${product.quantity}</td>
                                   <td>${product.salePrice}</td>
                               </tr>
@@ -305,7 +307,7 @@ const sendOrderDetailsMail = async (email, order, pdfBuffer) => {
                       </tbody>
                       <tfoot>
                           <tr>
-                              <td colspan="2"><strong>Total</strong></td>
+                              <td colspan="3"><strong>Total</strong></td>
                               <td><strong>${order.totalPrice}</strong></td>
                           </tr>
                       </tfoot>

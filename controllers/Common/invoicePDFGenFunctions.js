@@ -77,7 +77,7 @@ const generateInvoicePDF = async (order) => {
         .text(order.address.phoneNumber, 300, 215)
         .text(order.address.address, 300, 230)
         .text(
-          `${order.address.city}, ${order.address.regionState ? order.address.regionState +", ": ""}  ${order.address.pinCode}`,
+          `${order.address.city}, ${order.address.regionState ? order.address.regionState + ", " : ""}  ${order.address.pinCode}`,
           300,
           250
         )
@@ -98,6 +98,7 @@ const generateInvoicePDF = async (order) => {
         invoiceTableTop,
         "SL No",
         "Product Name",
+        "Size",
         "Price",
         "Quantity",
         "Sub Total"
@@ -113,6 +114,7 @@ const generateInvoicePDF = async (order) => {
           position,
           i + 1,
           item.productId.name,
+          item.size ? item.size : "Regular",
           item.salePrice,
           item.quantity,
           item.salePrice
