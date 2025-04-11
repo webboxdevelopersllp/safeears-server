@@ -44,31 +44,40 @@ const getProduct = async (req, res) => {
 
 // Creating new Product
 const addProduct = async (req, res) => {
-
     try {
+        console.log("Add products", req.body);
         let formData = { ...req.body, isActive: true };
         const files = req?.files;
-        console.log(formData);
 
-
-        // return res.status(200).json(typeof formData.attributes)
-
-
-        if (formData.attributes && typeof formData.attributes === 'string') {
+        // Handle attributes parsing
+        if (formData.attributes) {
             try {
-                formData.attributes = JSON.parse(formData.attributes);
+                // If it's a string (single attribute), parse it and make it an array
+                if (typeof formData.attributes === 'string') {
+                    formData.attributes = [JSON.parse(formData.attributes)];
+                }
+                // If it's an array of strings, parse each element
+                else if (Array.isArray(formData.attributes)) {
+                    formData.attributes = formData.attributes.map(attr => {
+                        // If the element is already an object, use it directly
+                        if (typeof attr === 'object') return attr;
+                        // Otherwise parse the JSON string
+                        return JSON.parse(attr);
+                    });
+                }
             } catch (err) {
+                console.error("Error parsing attributes:", err);
                 return res.status(400).json({
-                    error: "Invalid attributes format. Must be a valid JSON string"
+                    error: "Invalid attributes format. Must be a valid JSON string or array of JSON strings"
                 });
             }
         }
 
-
+        // Handle file uploads
         if (files && files.length > 0) {
             formData.moreImageURL = [];
             formData.imageURL = "";
-            files.map((file) => {
+            files.forEach((file) => {
                 if (file.fieldname === "imageURL") {
                     formData.imageURL = file.filename;
                 } else {
@@ -78,68 +87,62 @@ const addProduct = async (req, res) => {
         }
 
         const product = await Product.create(formData);
-
         res.status(200).json({ product });
     } catch (error) {
+        console.error("Error creating product:", error);
         res.status(400).json({ error: error.message });
     }
 };
 
-// Update a Product
 const updateProduct = async (req, res) => {
     try {
         const { id } = req.params;
-        const formData = req.body;
-        console.log("Updation: ", formData);
-        console.log("Files",req?.files)
+        let formData = req.body;
+        const files = req?.files;
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
             throw Error("Invalid ID!!!");
         }
 
-        const files = req?.files;
-
-        // Get existing product data
         const existingProduct = await Product.findById(id);
         if (!existingProduct) {
             throw Error("No Such Product");
         }
 
-        // Ensure moreImageURL is an array if present in formData
-        if (typeof formData.moreImageURL === "string") {
-            formData.moreImageURL = [formData.moreImageURL];
+        // Clean attributes - ensure proper data types
+        if (formData.attributes) {
+            formData.attributes = formData.attributes.map(attr => ({
+                name: attr.name,
+                value: attr.value,
+                isHighlight: attr.isHighlight === 'true' || attr.isHighlight === true,
+                ...(attr._id && mongoose.Types.ObjectId.isValid(attr._id) && { _id: attr._id })
+            }));
         }
 
+        if (!formData.moreImageURL) formData.moreImageURL = [];
+        if (!formData.imageURL) formData.imageURL = null;
+
+
+        // Handle image updates
         if (files && files.length > 0) {
-            const newMoreImageURLs = formData.moreImageURL || []; // Preserve existing moreImageURL
-            let newImageURL = formData.imageURL || existingProduct.imageURL; // Preserve imageURL
+            const newMoreImageURLs = formData.moreImageURL || [];
+            let newImageURL = formData.imageURL || existingProduct.imageURL;
 
             files.forEach((file) => {
                 if (file.fieldname === "imageURL") {
-                    newImageURL = file.filename; // Replace imageURL with new file
+                    newImageURL = file.filename;
                 } else {
-                    newMoreImageURLs.push(file.filename); // Add new images to moreImageURL
+                    newMoreImageURLs.push(file.filename);
                 }
             });
 
-            // Assign updated values
-            formData.imageURL = newImageURL || "";
-            formData.moreImageURL = newMoreImageURLs.length > 0 ? newMoreImageURLs : [];
+            formData.imageURL = newImageURL || existingProduct.imageURL;
+            formData.moreImageURL = newMoreImageURLs.length > 0 ? newMoreImageURLs : existingProduct.moreImageURL;
         }
 
-        // If no moreImageURL in formData and no new files, remove it
-        if ((!formData.moreImageURL || formData.moreImageURL.length === 0) && (!files || files.length === 0)) {
-            formData.moreImageURL = []
-            console.log("More image url deleted")
-        }
+        // Ensure proper empty values
 
-        // If imageURL is empty, remove it
-        if (!formData.imageURL) {
-            delete formData.imageURL;
-            formData.imageURL = []
-
-        }
-
+        console.log(req.body, "Form Data");
         // Update the product
         const updatedProduct = await Product.findOneAndUpdate(
             { _id: id },
@@ -152,12 +155,15 @@ const updateProduct = async (req, res) => {
         }
 
         res.status(200).json({ product: updatedProduct });
+
     } catch (error) {
         console.log(error);
-        res.status(400).json({ error: error.message });
+        res.status(400).json({
+            error: error.message,
+            details: error.stack
+        });
     }
 };
-
 
 // Deleting a Product
 const deleteProduct = async (req, res) => {

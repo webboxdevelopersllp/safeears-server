@@ -102,6 +102,7 @@ const createOrder = async (req, res) => {
 
     const products = cart.items.map((item) => ({
       productId: item.product._id,
+      size: item.size,
       quantity: item.quantity,
       totalPrice: item.product.salePrice,
       salePrice: item.product.salePrice,
@@ -149,11 +150,39 @@ const createOrder = async (req, res) => {
               "9": `${order2.address.address}, ${order2.address.city}`,
               "10": order2.paymentMode,
               "11": "Pending",
-             
+
             }),
           });
-     
+
         }
+
+        
+
+        const productDetailsForAdmin = order2.products.map(
+          (item) => `🔹 ${item.productId.name}  ₹${item.salePrice} x ${item.quantity}`
+        ).join("\n");
+
+        console.log("Product details for admin", productDetailsForAdmin);
+
+        await client.messages.create({
+          contentSid: "HXde21fcd52f9aeb338f117f2ccefe470b", // Your approved template SID
+          from: 'whatsapp:' + process.env.TWILIO_WHATSAPP_NUMBER, // Twilio sandbox number or your registered WhatsApp number
+          to: 'whatsapp:' + process.env.ADMIN_WHATSAPP_NUMBER, // Admin's WhatsApp number
+          contentVariables: JSON.stringify({
+            "1": order2.user.firstName,
+            "2": productDetailsForAdmin,
+            "3": order2.subTotal.toString(),
+            "4": order2.totalQuantity.toString(),
+            "5": order2.address.name,
+            "6": order2.address.phoneNumber,
+            "7": order2.address.pinCode.toString(),
+            "8": order2.address.locality,
+            "9": `${order2.address.address}, ${order2.address.city}`,
+            "10": order2.paymentMode,
+            "11": "Pending",
+
+          }),
+        });
 
 
 

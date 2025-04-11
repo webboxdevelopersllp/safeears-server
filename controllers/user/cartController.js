@@ -35,46 +35,50 @@ const addToCart = async (req, res) => {
   try {
     const token = req.cookies.user_token;
     const { _id } = jwt.verify(token, process.env.SECRET);
-    const items = req.body;
+    const { product, quantity, size } = req.body; // Destructure size from request body
+    console.log("items from addToCart", req.body);
 
-    const product = await Products.findById(items.product);
-    if (!product) {
+    const productDoc = await Products.findById(product);
+    if (!productDoc) {
       throw new Error("Product not found");
     }
-
-    // if (product.status !== ('in stock' || 'low quantity')) {
-    //   throw new Error("Insufficient stock Quantity");
-    // }
 
     let cart = {};
     const exists = await Cart.findOne({ user: _id });
 
     if (exists) {
-      const existingProductIndex = exists.items.findIndex((item) =>
-        item.product.equals(items.product)
+      // Check for existing product with the same size
+      const existingItemIndex = exists.items.findIndex(
+        (item) => 
+          item.product.equals(product) && 
+          item.size === size // Compare sizes
       );
 
-      if (existingProductIndex !== -1) {
-
-
+      if (existingItemIndex !== -1) {
+        // Update quantity if same product and size exists
         cart = await Cart.findOneAndUpdate(
-          { "items.product": items.product, user: _id },
+          { 
+            user: _id,
+            "items.product": product,
+            "items.size": size
+          },
           {
             $inc: {
-              "items.$.quantity": items.quantity,
+              "items.$.quantity": quantity,
             },
           },
           { new: true }
         );
       } else {
-        // If the product doesn't exist in the cart, add it
+        // Add as new item if different size
         cart = await Cart.findOneAndUpdate(
           { user: _id },
           {
             $push: {
               items: {
-                product: items.product,
-                quantity: items.quantity,
+                product,
+                quantity,
+                size // Include size in new item
               },
             },
           },
@@ -82,14 +86,14 @@ const addToCart = async (req, res) => {
         );
       }
     } else {
-      // If the cart doesn't exist, create a new one with the item
+      // Create new cart with item including size
       cart = await Cart.create({
         user: _id,
-        items: [{ product: items.product, quantity: items.quantity }],
+        items: [{ product, quantity, size }],
       });
     }
 
-    res.status(200).json({ cart: cart });
+    res.status(200).json({ cart });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -145,74 +149,113 @@ c
 };
 
 const incrementQuantity = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  
   try {
     const { cartId, productId } = req.params;
+    const { size } = req.body;
 
-    let cart = await Cart.findOne({ _id: cartId });
+    const cart = await Cart.findById(cartId).session(session).lean();
+    if (!cart) throw new Error("Cart not found");
 
-    let [product] = cart.items.filter((item) => {
-      return item.product.toString() === productId;
-    });
-
-    let productOriginalData = await Products.findById(product.product, {
-      stockQuantity: 1,
-    });
-
-
-
-    cart = await Cart.findOneAndUpdate(
-      { "items.product": productId, _id: cartId },
-      {
-        $inc: {
-          "items.$.quantity": 1,
-        },
-      },
-      { new: true }
+    const itemIndex = cart.items.findIndex(item => 
+      item.product.toString() === productId && 
+      (item.size === size || (!item.size && !size))
     );
 
-    let [dataToSend] = cart.items.filter((item) => {
-      return item.product.toString() === productId;
+    if (itemIndex === -1) throw new Error("Item not found in cart");
+
+    const updatedItems = cart.items.map((item, idx) => {
+      if (idx === itemIndex) {
+        return {
+          ...item,
+          quantity: item.quantity + 1
+        };
+      }
+      return item;
     });
 
-    return res.status(200).json({ updatedItem: dataToSend });
+    const updatedCart = await Cart.findByIdAndUpdate(
+      cartId,
+      { $set: { items: updatedItems } },
+      { new: true, session }
+    ).lean();
+
+    await session.commitTransaction();
+
+    return res.status(200).json({
+      success: true,
+      updatedItem: updatedCart.items[itemIndex]
+    });
+
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    await session.abortTransaction();
+    res.status(400).json({ 
+      success: false,
+      error: error.message 
+    });
+  } finally {
+    session.endSession();
   }
 };
+
 
 const decrementQuantity = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const { cartId, productId } = req.params;
+    const { size } = req.body;
 
-    let cart = await Cart.findOne({ _id: cartId });
+    const cart = await Cart.findById(cartId).session(session).lean();
+    if (!cart) throw new Error("Cart not found");
 
-    let [product] = cart.items.filter((item) => {
-      return item.product.toString() === productId;
-    });
-
-    if (product.quantity < 2) {
-      throw Error("At-least 1 quantity is required");
-    }
-
-    cart = await Cart.findOneAndUpdate(
-      { "items.product": productId, _id: cartId },
-      {
-        $inc: {
-          "items.$.quantity": -1,
-        },
-      },
-      { new: true }
+    const itemIndex = cart.items.findIndex(item => 
+      item.product.toString() === productId && 
+      (item.size === size || (!item.size && !size))
     );
 
-    let [dataToSend] = cart.items.filter((item) => {
-      return item.product.toString() === productId;
+    if (itemIndex === -1) throw new Error("Item not found in cart");
+    if (cart.items[itemIndex].quantity <= 1) {
+      throw new Error("Minimum quantity reached");
+    }
+
+    const updatedItems = cart.items.map((item, idx) => {
+      if (idx === itemIndex) {
+        return {
+          ...item,
+          quantity: item.quantity - 1
+        };
+      }
+      return item;
     });
 
-    return res.status(200).json({ updatedItem: dataToSend });
+    const updatedCart = await Cart.findByIdAndUpdate(
+      cartId,
+      { $set: { items: updatedItems } },
+      { new: true, session }
+    ).lean();
+
+    await session.commitTransaction();
+
+    return res.status(200).json({
+      success: true,
+      updatedItem: updatedCart.items[itemIndex]
+    });
+
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    await session.abortTransaction();
+    res.status(400).json({
+      success: false,
+      error: error.message
+    });
+  } finally {
+    session.endSession();
   }
 };
+
 
 module.exports = {
   getCart,

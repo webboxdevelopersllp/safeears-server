@@ -62,6 +62,9 @@ const ProductSchema = new Schema({
     type: Number,
     required: true,
   },
+  size: {
+    type: String,
+  },
   salePrice: {
     type: Number,
     required: true,
