@@ -19,6 +19,10 @@ const CartSchema = new Schema({
       quantity: {
         type: Number,
       },
+      size: {
+        type: String,
+        required: false, // Not all products may have sizes
+      },
     },
   ],
 
