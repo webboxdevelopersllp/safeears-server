@@ -80,9 +80,9 @@ const createAddress = async (req, res) => {
 const updateAddress = async (req, res) => {
   try {
     const body = req.body;
-
+    console.log("body", body);
+    
     const token = req.cookies.user_token;
-
     const { _id } = jwt.verify(token, process.env.SECRET);
 
     if (!mongoose.Types.ObjectId.isValid(_id)) {
@@ -94,19 +94,26 @@ const updateAddress = async (req, res) => {
       throw Error("Address doesn't exists");
     }
 
+    // Create a copy of body without the _id field
+    const { _id: omitId, ...updateData } = body;
+
     const address = await Address.findOneAndUpdate(
-      { user: _id },
+      { _id: body._id, user: _id }, // Find by both address _id and user _id
       {
-        $set: {
-          ...body,
-        },
+        $set: updateData, // Use the filtered data without _id
       },
       {
         new: true,
       }
     );
+
+    if (!address) {
+      throw Error("Address not found or not owned by user");
+    }
+
     res.status(200).json({ address });
   } catch (error) {
+    console.log("error", error);
     res.status(400).json({ error: error.message });
   }
 };
