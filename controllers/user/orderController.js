@@ -134,6 +134,8 @@ const createOrder = async (req, res) => {
             (item) => `🔹 ${item.productId.name} - ₹${item.salePrice} x ${item.quantity}`
           ).join("\n");
 
+          console.log("Product details for user", order2.products);
+
           await client.messages.create({
             contentSid: "HX247eebf50e2181bb3291ecfc0cb187d3", // Your approved template SID
             from: 'whatsapp:' + process.env.TWILIO_WHATSAPP_NUMBER, // Twilio sandbox number or your registered WhatsApp number
