@@ -7,7 +7,7 @@ const getProducts = async (req, res) => {
 
         const products = await Product.find(
             {
-                status: { $in: ["in stock", "low quantity"] },
+                status: { $in: ["in stock", "low quantity","out of stock"] },
 
             },
             {
@@ -24,10 +24,10 @@ const getProducts = async (req, res) => {
 
 
         const totalAvailableProducts = await Product.countDocuments({
-            status: { $in: ["in stock", "low quantity"] },
+            status: { $in: ["in stock", "low quantity", "out of stock"] },
 
         });
-
+        console.log("loged products", products)
         res.status(200).json({ products, totalAvailableProducts });
     } catch (error) {
         res.status(400).json({ error: error.message });
