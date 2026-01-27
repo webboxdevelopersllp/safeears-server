@@ -60,6 +60,8 @@ const getOrders = async (req, res) => {
       limit = 10,
       startingDate,
       endingDate,
+      hospital,
+      doctor,
     } = req.query;
 
     let filter = {};
@@ -103,7 +105,16 @@ const getOrders = async (req, res) => {
           // filter.orderId = searchAsNumber;
           throw new Error("Please search using order Id");
         }
+
+
       }
+    }
+
+    if (hospital && mongoose.Types.ObjectId.isValid(hospital)) {
+      filter.hospital = hospital;
+    }
+    if (doctor && mongoose.Types.ObjectId.isValid(doctor)) {
+      filter.doctor = doctor;
     }
 
     const skip = (page - 1) * limit;
@@ -156,7 +167,7 @@ const updateOrderStatus = async (req, res) => {
     };
 
     if (trackingId) {
-      console.log("Sample tracking iD",trackingId);
+      console.log("Sample tracking iD", trackingId);
 
       updateOptions.$set.trackingId = trackingId; // Set trackingId in update
     }
@@ -203,7 +214,7 @@ const generateOrderInvoice = async (req, res) => {
 
     console.log(id);
     const order = await Order.findById(id).populate("products.productId");
-    
+
     const pdfBuffer = await generateInvoicePDF(order);
 
     // Set headers for the response
@@ -213,7 +224,7 @@ const generateOrderInvoice = async (req, res) => {
     res.status(200).end(pdfBuffer);
   } catch (error) {
     console.log(error);
-    
+
     res.status(400).json({ error: error.message });
   }
 };

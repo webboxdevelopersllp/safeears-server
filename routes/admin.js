@@ -4,6 +4,9 @@ const upload = require("../middleware/upload");
 const { getOrders, updateOrderStatus, getOrder, generateOrderInvoice } = require("../controllers/admin/orderController");
 const { getPayments, clearPayments } = require("../controllers/admin/paymentController");
 const { getTestimonials, addTestimonial, editTestimonial, deleteTestimonial, updateTestimonialOrder } = require("../controllers/admin/testimonialController");
+const { getHospitals, getHospital, deleteHospital, updateHospital, addHospital, getAnalytics } = require("../controllers/admin/hospitalController");
+const { getDoctors, getDoctor, deleteDoctor, updateDoctor, addDoctor } = require("../controllers/admin/doctorController");
+const { addBanner, getBanners, deleteBanner, updateBannerOrder, toggleBannerStatus } = require("../controllers/admin/bannerController");
 const router = express.Router();
 
 
@@ -20,6 +23,8 @@ router.post("/product", upload.any(), addProduct);
 router.get("/payments", getPayments);
 router.get("/clear-payments", clearPayments);
 
+router.get("/analytics", getAnalytics);
+
 
 // Order controller functions mounting them to corresponding route
 router.get("/orders", getOrders);
@@ -33,19 +38,46 @@ router.get("/order-invoice/:id", generateOrderInvoice);
 
 
 
+
+
+
 // Get all testimonials
 router.get('/testimonials', getTestimonials);
-
 // Add a new testimonial
 router.post('/testimonial', addTestimonial);
-
 // Edit a testimonial
 router.put('/testimonial/:id', editTestimonial);
-
 // Delete a testimonial
 router.delete('/testimonial/:id', deleteTestimonial);
-
 // Update the order of testimonials (for drag-and-drop)
 router.post('/testimonial/order', updateTestimonialOrder); // New route for updating order
+
+
+
+// Hospital Routes
+router.get("/hospitals", getHospitals);
+router.get("/hospital/:id", getHospital);
+router.delete("/hospital/:id", deleteHospital);
+router.patch("/hospital/:id", upload.any(), updateHospital);
+router.post("/hospital", upload.any(), addHospital);
+
+// Doctor Routes
+router.get("/doctors", getDoctors);
+router.get("/doctor/:id", getDoctor);
+router.delete("/doctor/:id", deleteDoctor);
+router.patch("/doctor/:id", upload.any(), updateDoctor);
+router.post("/doctor", upload.any(), addDoctor);
+
+
+// Banner Routes
+// Using upload.any() to handle topImage and bottomImage fields
+router.post("/banner", upload.any(), addBanner);
+router.get("/banners", getBanners);
+router.delete("/banner/:id", deleteBanner);
+router.patch("/banner/order", updateBannerOrder);
+router.patch("/banner/:id/status", toggleBannerStatus); // Optional: toggle active status
+
+
+
 
 module.exports = router;

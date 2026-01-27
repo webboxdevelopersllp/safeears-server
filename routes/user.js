@@ -1,6 +1,6 @@
 const express = require("express");
 const upload = require("../middleware/upload");
-const {requireAuth} = require("../middleware/requireAuth")
+const { requireAuth } = require("../middleware/requireAuth")
 const { getUserDataFirst, logoutUser, editUser, changePassword, rateProduct } = require("../controllers/userController");
 const { getProducts, getProduct, deleteReview } = require("../controllers/user/productController");
 const { getAddresses, getAddress, createAddress, deleteAddress, updateAddress } = require("../controllers/user/addressController");
@@ -9,6 +9,9 @@ const { createOrder, buyNow, getOrders, orderCount, getOrder, generateOrderInvoi
 const { createRazerPayOrder, verifyPayment, getKey } = require("../controllers/user/paymentController");
 
 const { getTestimonials } = require("../controllers/admin/testimonialController");
+const { getHospitals } = require("../controllers/admin/hospitalController");
+const { getDoctors } = require("../controllers/admin/doctorController");
+const { getActiveBanners } = require("../controllers/admin/bannerController"); // Reuse admin controller for public fetch
 
 const router = express.Router();
 
@@ -28,7 +31,7 @@ router.post("/change-password", changePassword);
 // Products
 router.get("/products", getProducts);
 router.get("/product/:id", getProduct);
-router.delete('/product/:productId/delete-review/:reviewId',deleteReview)
+router.delete('/product/:productId/delete-review/:reviewId', deleteReview)
 
 // Order
 router.post("/order", createOrder);
@@ -69,8 +72,13 @@ router.get("/razor-key", getKey);
 
 router.get('/testimonials', getTestimonials);
 
+router.get('/hospitals', getHospitals);
+router.get('/doctors', getDoctors);
+
+router.get('/banners', getActiveBanners);
+
 // Rating by user 
-router.post('/rate/:productId',requireAuth,rateProduct)
+router.post('/rate/:productId', requireAuth, rateProduct)
 
 
 module.exports = router;

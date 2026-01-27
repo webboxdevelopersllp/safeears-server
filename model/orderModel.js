@@ -2,6 +2,8 @@ const mongoose = require("mongoose");
 const User = require("./userModel");
 const Product = require("./productModel");
 const Counter = require("./counterModel");
+const Hospital = require("./hospitalModel");
+const Doctor = require("./doctorModel");
 
 const { Schema } = mongoose;
 
@@ -168,6 +170,16 @@ const OrderSchema = new Schema(
     },
     notes: {
       type: String,
+    },
+    hospital: {
+      type: Schema.Types.ObjectId,
+      ref: Hospital,
+      required: false,
+    },
+    doctor: {
+      type: Schema.Types.ObjectId,
+      ref: Doctor,
+      required: false,
     },
   },
   { timestamps: true }

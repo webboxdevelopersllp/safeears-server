@@ -83,7 +83,7 @@ const createOrder = async (req, res) => {
       throw Error("Invalid ID!!!");
     }
 
-    const { address, paymentMode } = req.body;
+    const { address, paymentMode, hospital, doctor } = req.body;
 
     const addressData = await Address.findOne({ _id: address });
 
@@ -118,13 +118,18 @@ const createOrder = async (req, res) => {
       paymentMode,
       totalQuantity,
       statusHistory: [{ status: "pending" }],
+      hospital,
+      doctor,
     };
 
     const order = await Order.create(orderData);
 
     if (order) {
       try {
-        const order2 = await Order.findById(order._id).populate("products.productId user");
+        const order2 = await Order.findById(order._id)
+          .populate("products.productId user")
+          .populate("hospital", "name")
+          .populate("doctor", "name");
 
         const pdfBuffer = await generateInvoicePDF(order2);
 
@@ -135,6 +140,9 @@ const createOrder = async (req, res) => {
           ).join("\n");
 
           console.log("Product details for user", order2.products);
+
+          let hospitalName = order2.hospital ? order2.hospital.name : "N/A";
+          let doctorName = order2.doctor ? order2.doctor.name : "N/A";
 
           await client.messages.create({
             contentSid: "HX247eebf50e2181bb3291ecfc0cb187d3", // Your approved template SID
@@ -152,13 +160,12 @@ const createOrder = async (req, res) => {
               "9": `${order2.address.address}, ${order2.address.city}`,
               "10": order2.paymentMode,
               "11": "Pending",
-
             }),
           });
 
         }
 
-        
+
 
         const productDetailsForAdmin = order2.products.map(
           (item) => `🔹 ${item.productId.name}  ₹${item.salePrice} x ${item.quantity}`
@@ -337,7 +344,7 @@ const orderCount = async (req, res) => {
 
 const buyNow = async (req, res) => {
   try {
-    const { address, paymentMode, notes, quantity } = req.body;
+    const { address, paymentMode, notes, quantity, hospital, doctor } = req.body;
 
     // User Id
     const token = req.cookies.user_token;
@@ -392,6 +399,8 @@ const buyNow = async (req, res) => {
           status: "pending",
         },
       ],
+      hospital,
+      doctor,
       ...(notes ? notes : {}),
       // ...(cart.coupon ? { coupon: cart.coupon } : {}),
       // ...(cart.couponCode ? { couponCode: cart.couponCode } : {}),
