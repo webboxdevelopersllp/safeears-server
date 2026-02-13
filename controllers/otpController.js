@@ -48,8 +48,7 @@ const validateOTP = async (req, res) => {
 
   try {
     const data = await OTP.findOne({ email });
-    console.log("OTP from db", data)
-    console.log("Number", email)
+   
     if (!data) {
       throw Error("OTP expired");
     }
